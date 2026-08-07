@@ -1,9 +1,12 @@
-import type { ReactNode } from 'react'
+import { useRef, useState, type ChangeEvent, type ReactNode } from 'react'
 import { documentMeta } from '../data/document'
+import type { DocumentInput } from '../types/document'
+import { fileToBase64 } from '../utils/image'
 import { PositioningPanel, Roadmap } from './ui'
 
 interface Props {
-  onStart: (method: string) => void
+  onStart: (documentInput: DocumentInput) => void
+  onOpenSample: () => void
 }
 
 const stroke = {
@@ -66,7 +69,46 @@ function Card({
   )
 }
 
-export default function HomeScreen({ onStart }: Props) {
+export default function HomeScreen({ onStart, onOpenSample }: Props) {
+  const scanInputRef = useRef<HTMLInputElement>(null)
+  const uploadInputRef = useRef<HTMLInputElement>(null)
+  const [pasteOpen, setPasteOpen] = useState(false)
+  const [pastedText, setPastedText] = useState('')
+  const [localError, setLocalError] = useState<string | null>(null)
+
+  async function handleFile(file?: File) {
+    setLocalError(null)
+
+    if (!file || !file.type.startsWith('image/')) {
+      setLocalError('Please choose an image file.')
+      return
+    }
+
+    try {
+      const { data, mediaType } = await fileToBase64(file)
+      onStart({ type: 'image', data, mediaType })
+    } catch {
+      setLocalError("We couldn't read that image. Please try another one.")
+    }
+  }
+
+  async function handleFileChange(event: ChangeEvent<HTMLInputElement>) {
+    const input = event.currentTarget
+    await handleFile(input.files?.[0])
+    input.value = ''
+  }
+
+  function handlePasteContinue() {
+    setLocalError(null)
+    const text = pastedText.trim()
+    if (!text) {
+      setLocalError('Please paste some text first.')
+      return
+    }
+
+    onStart({ type: 'text', text })
+  }
+
   return (
     <main className="mx-auto w-full max-w-[1120px] px-6 pt-16 pb-24 md:px-10">
       <p className="text-[17px] font-medium tracking-[0.14em] text-[var(--teal)] uppercase">
@@ -86,21 +128,77 @@ export default function HomeScreen({ onStart }: Props) {
           icon={<ScanIcon />}
           label="Scan a document"
           note="Use your camera to photograph a letter or form."
-          onClick={() => onStart('scan')}
+          onClick={() => {
+            setLocalError(null)
+            scanInputRef.current?.click()
+          }}
         />
         <Card
           icon={<UploadIcon />}
           label="Upload a file"
-          note="A PDF or a photo you already have on this device."
-          onClick={() => onStart('upload')}
+          note="A photo you already have on this device."
+          onClick={() => {
+            setLocalError(null)
+            uploadInputRef.current?.click()
+          }}
         />
         <Card
           icon={<PasteIcon />}
           label="Paste a link or text"
           note="A web page address, or text copied from anywhere."
-          onClick={() => onStart('paste')}
+          onClick={() => {
+            setLocalError(null)
+            setPasteOpen(true)
+          }}
         />
       </div>
+
+      <input
+        ref={scanInputRef}
+        type="file"
+        accept="image/*"
+        capture="environment"
+        className="sr-only"
+        tabIndex={-1}
+        onChange={handleFileChange}
+      />
+      <input
+        ref={uploadInputRef}
+        type="file"
+        accept="image/*"
+        className="sr-only"
+        tabIndex={-1}
+        onChange={handleFileChange}
+      />
+
+      {pasteOpen && (
+        <div className="mt-6 max-w-[720px] border-2 border-[var(--ink)] p-6">
+          <label htmlFor="document-text" className="block text-[20px] font-semibold">
+            Paste text
+          </label>
+          <textarea
+            id="document-text"
+            value={pastedText}
+            onChange={(event) => setPastedText(event.target.value)}
+            rows={7}
+            className="mt-3 w-full resize-y border-2 border-[var(--rule)] bg-[var(--paper)] p-4 text-[18px] text-[var(--ink)]"
+            placeholder="Paste the document text here"
+          />
+          <button
+            type="button"
+            onClick={handlePasteContinue}
+            className="mt-4 border-2 border-[var(--teal)] bg-[var(--teal)] px-6 py-3 font-semibold text-[var(--paper)] transition-colors hover:bg-[var(--teal-deep)]"
+          >
+            Continue
+          </button>
+        </div>
+      )}
+
+      {localError && (
+        <p role="alert" className="mt-4 max-w-[62ch] font-semibold text-red-700">
+          {localError}
+        </p>
+      )}
 
       <p className="mt-8 max-w-[62ch] text-[18px]">
         Your document stays private. Nothing is shared.
@@ -115,7 +213,7 @@ export default function HomeScreen({ onStart }: Props) {
         <h2 className="text-[22px] font-semibold">Continue where you left off</h2>
         <button
           type="button"
-          onClick={() => onStart('sample')}
+          onClick={onOpenSample}
           className="mt-5 flex w-full max-w-[640px] items-center justify-between gap-6 border-2 border-[var(--rule)] p-6 text-left transition-colors duration-150 hover:border-[var(--ink)]"
         >
           <span>

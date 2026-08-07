@@ -3,12 +3,19 @@ import HomeScreen from './components/HomeScreen'
 import ProcessingScreen from './components/ProcessingScreen'
 import SigningView from './components/SigningView'
 import SettingsScreen, { defaultSettings, type Settings } from './components/SettingsScreen'
+import type { DocumentInput } from './types/document'
 
 type Screen = 'home' | 'processing' | 'signing' | 'settings'
 
 export default function App() {
   const [screen, setScreen] = useState<Screen>('home')
   const [settings, setSettings] = useState<Settings>(defaultSettings)
+  const [, setDocumentInput] = useState<DocumentInput | null>(null)
+
+  function handleDocumentStart(input: DocumentInput) {
+    setDocumentInput(input)
+    setScreen('processing')
+  }
 
   // Contrast mode is a document-level preference, so it drives a root attribute
   // rather than being threaded through every component.
@@ -28,7 +35,8 @@ export default function App() {
       <div id="main">
         {screen === 'home' && (
           <HomeScreen
-            onStart={(method) => setScreen(method === 'sample' ? 'signing' : 'processing')}
+            onStart={handleDocumentStart}
+            onOpenSample={() => setScreen('signing')}
           />
         )}
         {screen === 'processing' && <ProcessingScreen onDone={() => setScreen('signing')} />}
