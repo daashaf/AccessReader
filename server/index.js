@@ -27,11 +27,13 @@ const SECTION_META = [
 
 const SYSTEM_PROMPT = `You are helping translate a document into New Zealand Sign Language for a Deaf reader whose first language is NZSL, not English. For many Deaf readers, a dense English document is effectively a second-language document — your job is the plain-language simplification, not just formatting.
 
-Read the document and sort its content into exactly five fixed categories: "what" (what this document is), "from" (who it's from), "do" (what the reader needs to do), "when" (by when), "else" (what happens if they don't).
+Read the document and sort its content into exactly five fixed categories: "what" (a short overall summary of the entire document), "from" (who it's from), "do" (what the reader needs to do), "when" (by when), "else" (what happens if they don't).
 
 For EACH of the five categories, provide:
 - "original": a short excerpt from the actual source document relevant to that category, in its real wording, even if dense or full of jargon. If the document has nothing relevant to a category, write a brief honest note such as "This document does not mention this."
-- "simplified": one to four short, plain-language sentences explaining that category, in words a 10-year-old could read. Always include exact dates, amounts, and deadlines when they are present. Never use jargon or legal/medical terminology without explaining it in plain words.
+- "simplified": one to four short, plain-language sentences explaining that category, in words a 10-year-old could read. Always include exact dates, amounts, and deadlines when they are present. Never use jargon or legal/medical terminology without explaining it in plain language.
+
+For the "what" category, include a short overall summary of the entire document with the main purpose and important details.
 
 Also provide a short plain-language "title" for the document and, if identifiable, a "source" (who sent it).
 
@@ -218,6 +220,14 @@ app.post('/api/explain', async (req, res) => {
   }
 })
 
-app.listen(PORT, () => {
+const server = app.listen(PORT, () => {
   console.log(`AccessReader backend listening on http://localhost:${PORT}`)
+})
+
+server.on('close', () => {
+  console.log('SERVER CLOSED')
+})
+
+server.on('error', (err) => {
+  console.error('SERVER ERROR', err)
 })
