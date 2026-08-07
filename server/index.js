@@ -8,7 +8,9 @@ import Anthropic from '@anthropic-ai/sdk'
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 const DIST_DIR = path.join(__dirname, '..', 'dist')
 
-const PORT = process.env.SERVER_PORT || 3001
+// Most hosts (Render, Railway, Heroku) inject PORT and expect the app to
+// bind to it; SERVER_PORT remains for local/explicit overrides.
+const PORT = process.env.PORT || process.env.SERVER_PORT || 3001
 const MODEL = process.env.ANTHROPIC_MODEL || 'claude-sonnet-5'
 
 if (!process.env.ANTHROPIC_API_KEY) {
