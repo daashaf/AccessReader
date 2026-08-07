@@ -1,6 +1,12 @@
 import 'dotenv/config'
+import fs from 'fs'
+import path from 'path'
+import { fileURLToPath } from 'url'
 import express from 'express'
 import Anthropic from '@anthropic-ai/sdk'
+
+const __dirname = path.dirname(fileURLToPath(import.meta.url))
+const DIST_DIR = path.join(__dirname, '..', 'dist')
 
 const PORT = process.env.SERVER_PORT || 3001
 const MODEL = process.env.ANTHROPIC_MODEL || 'claude-sonnet-5'
@@ -219,6 +225,18 @@ app.post('/api/explain', async (req, res) => {
     res.status(500).json({ code, error: message })
   }
 })
+
+// Serves the built frontend from the same process as the API, so a single
+// deploy (build once, run this file) is enough — no separate static host
+// needed. In local dev, `dist/` doesn't exist yet (Vite's own dev server
+// handles the frontend on its own port instead), so this stays inactive
+// and `npm run dev`'s two-server setup is unaffected.
+if (fs.existsSync(path.join(DIST_DIR, 'index.html'))) {
+  app.use(express.static(DIST_DIR))
+  app.use((req, res) => {
+    res.sendFile(path.join(DIST_DIR, 'index.html'))
+  })
+}
 
 const server = app.listen(PORT, () => {
   console.log(`AccessReader backend listening on http://localhost:${PORT}`)
