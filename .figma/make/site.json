@@ -1,0 +1,10 @@
+{
+  "description": "Streamline document review and design processes by enabling users to upload, annotate, and collaborate on files in real-time for enhanced productivity.",
+  "robots": {
+    "index": false
+  },
+  "accessibility": {
+    "addBypassLinks": false,
+    "ignoreReducedMotion": false
+  }
+}
