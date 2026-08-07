@@ -1,6 +1,5 @@
 import { useEffect, useState } from 'react'
-import { Tick } from './ui'
-import { documentMeta } from '../data/document'
+import { Button, Tick } from './ui'
 
 const STEPS = [
   'Reading your document',
@@ -10,34 +9,50 @@ const STEPS = [
 ]
 
 interface Props {
+  /** True once the real AI call has actually finished. */
+  ready: boolean
   onDone: () => void
+  onCancel: () => void
+  title?: string
 }
 
 /**
  * Progress is entirely visual: steps appear as they complete, each with a tick
  * and a filling bar. Nothing here depends on a sound. The live region announces
  * the same information for screen-reader users.
+ *
+ * The step animation always plays out on its own timer so this never looks
+ * broken on a fast connection — but it only calls onDone once `ready` is
+ * true, so a slow document doesn't jump into a translation that isn't there yet.
  */
-export default function ProcessingScreen({ onDone }: Props) {
+export default function ProcessingScreen({ ready, onDone, onCancel, title }: Props) {
   const [done, setDone] = useState(0)
 
   useEffect(() => {
     if (done >= STEPS.length) {
+      if (!ready) return
       const finish = setTimeout(onDone, 900)
       return () => clearTimeout(finish)
     }
     const next = setTimeout(() => setDone((n) => n + 1), done === 0 ? 700 : 1150)
     return () => clearTimeout(next)
-  }, [done, onDone])
+  }, [done, ready, onDone])
 
   const pct = Math.round((done / STEPS.length) * 100)
 
   return (
     <main className="mx-auto w-full max-w-[760px] px-6 pt-20 pb-24 md:px-10">
-      <h1 className="text-[clamp(30px,4vw,42px)] leading-tight font-semibold">
-        Preparing your translation
-      </h1>
-      <p className="mt-4 text-[19px] text-[var(--ink-soft)]">{documentMeta.title}</p>
+      <div className="flex flex-wrap items-start justify-between gap-4">
+        <div>
+          <h1 className="text-[clamp(30px,4vw,42px)] leading-tight font-semibold">
+            Preparing your translation
+          </h1>
+          <p className="mt-4 text-[19px] text-[var(--ink-soft)]">{title || 'Your document'}</p>
+        </div>
+        <Button variant="quiet" onClick={onCancel}>
+          Cancel
+        </Button>
+      </div>
 
       <div className="mt-10 h-4 w-full border-2 border-[var(--ink)]">
         <div
