@@ -1,15 +1,10 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import SigningAvatar from './SigningAvatar'
 import { Button, Tick, DisclosureStrip } from './ui'
-import {
-  documentMeta,
-  formatDuration,
-  nonManualLabel,
-  nonManualMeaning,
-  sections,
-  sectionSeconds,
-} from '../data/document'
+import { formatDuration, nonManualLabel, nonManualMeaning, sectionSeconds } from '../data/document'
+import type { Section } from '../data/document'
 import type { Settings } from './SettingsScreen'
+import type { DocumentMeta } from '../lib/api'
 
 type TextMode = 'simplified' | 'original' | 'gloss'
 
@@ -27,12 +22,14 @@ const stageHeight: Record<Settings['avatarSize'], string> = {
 }
 
 interface Props {
+  documentMeta: DocumentMeta
+  sections: Section[]
   settings: Settings
   onExit: () => void
   onOpenSettings: () => void
 }
 
-export default function SigningView({ settings, onExit, onOpenSettings }: Props) {
+export default function SigningView({ documentMeta, sections, settings, onExit, onOpenSettings }: Props) {
   const [sectionIndex, setSectionIndex] = useState(0)
   const [cueIndex, setCueIndex] = useState(0)
   const [elapsed, setElapsed] = useState(0)
