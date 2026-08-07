@@ -8,6 +8,7 @@ import {
   nonManualMeaning,
   sections,
   sectionSeconds,
+  type NonManual,
 } from '../data/document'
 import type { Settings } from './SettingsScreen'
 
@@ -26,6 +27,19 @@ const stageHeight: Record<Settings['avatarSize'], string> = {
   large: 'clamp(380px, 58vh, 680px)',
 }
 
+const nmmGrammarExplanation: Record<NonManual, string> = {
+  'brow-raise':
+    'In NZSL, raised eyebrows mark yes/no questions or set up a topic at the beginning of a clause. They signal that a response or related statement is coming.',
+  'brow-furrow':
+    'In NZSL, furrowed eyebrows mark WH- questions (who, what, where, when, why, how), directing focus to the specific information being asked.',
+  headshake:
+    'In NZSL, a headshake acts as a core grammatical negation marker, accompanying or modifying the action verb to mean "not".',
+  topic:
+    'In NZSL, topic marking moves the main subject or timeline context to the front of the sentence, framed with raised brows and head tilt.',
+  neutral:
+    'Neutral facial posture is used for standard declarative statements and factual narrative delivery in NZSL.',
+}
+
 interface Props {
   settings: Settings
   onExit: () => void
@@ -41,13 +55,16 @@ export default function SigningView({ settings, onExit, onOpenSettings }: Props)
   const [complete, setComplete] = useState(false)
   const [watched, setWatched] = useState<string[]>([])
   const [textMode, setTextMode] = useState<TextMode>('simplified')
+  const [focusMode, setFocusMode] = useState(false)
+  const [showNmmInfo, setShowNmmInfo] = useState(false)
+  const [showShortcutsModal, setShowShortcutsModal] = useState(false)
+
   const nextButton = useRef<HTMLButtonElement>(null)
 
   const section = sections[sectionIndex]
   const cue = section.cues[cueIndex]
 
-  // Playback clock. 120ms ticks are enough to drive subtitles and the progress
-  // bar; the avatar runs its own animation frame loop.
+  // Playback clock. 120ms ticks drive subtitles and the progress bar.
   useEffect(() => {
     if (!playing || complete) return
     const id = setInterval(() => setElapsed((e) => e + 0.12 * speed), 120)
@@ -78,6 +95,13 @@ export default function SigningView({ settings, onExit, onOpenSettings }: Props)
     setPlaying(autoplay)
   }, [])
 
+  const seekToCue = useCallback((index: number, autoplay = true) => {
+    setCueIndex(index)
+    setElapsed(0)
+    setComplete(false)
+    setPlaying(autoplay)
+  }, [])
+
   const replay = useCallback(() => {
     setCueIndex(0)
     setElapsed(0)
@@ -85,13 +109,105 @@ export default function SigningView({ settings, onExit, onOpenSettings }: Props)
     setPlaying(true)
   }, [])
 
+  // Keyboard shortcuts listener scoped to this screen
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      const target = e.target as HTMLElement | null
+      if (
+        target &&
+        (target.tagName === 'INPUT' ||
+          target.tagName === 'TEXTAREA' ||
+          target.tagName === 'SELECT' ||
+          target.isContentEditable)
+      ) {
+        return
+      }
+
+      if (e.key === ' ' || e.key === 'k' || e.key === 'K') {
+        e.preventDefault()
+        if (complete) replay()
+        else setPlaying((p) => !p)
+      } else if (e.key === 'r' || e.key === 'R') {
+        e.preventDefault()
+        replay()
+      } else if (e.key === 'ArrowLeft') {
+        e.preventDefault()
+        if (cueIndex > 0) {
+          seekToCue(cueIndex - 1)
+        } else if (sectionIndex > 0) {
+          goTo(sectionIndex - 1)
+        }
+      } else if (e.key === 'ArrowRight') {
+        e.preventDefault()
+        if (cueIndex + 1 < section.cues.length) {
+          seekToCue(cueIndex + 1)
+        } else if (sectionIndex + 1 < sections.length) {
+          goTo(sectionIndex + 1)
+        } else {
+          setPlaying(false)
+          setComplete(true)
+        }
+      } else if (e.key === '1') {
+        e.preventDefault()
+        setSpeed(0.75)
+      } else if (e.key === '2') {
+        e.preventDefault()
+        setSpeed(1)
+      } else if (e.key === '3') {
+        e.preventDefault()
+        setSpeed(1.25)
+      } else if (e.key === 't' || e.key === 'T') {
+        e.preventDefault()
+        setTextMode((m) =>
+          m === 'simplified' ? 'original' : m === 'original' ? 'gloss' : 'simplified',
+        )
+      } else if (e.key === 'f' || e.key === 'F') {
+        e.preventDefault()
+        setFocusMode((f) => !f)
+      } else if (e.key === '?' || (e.shiftKey && e.key === '/')) {
+        e.preventDefault()
+        setShowShortcutsModal((s) => !s)
+      } else if (e.key === 'Escape') {
+        if (showShortcutsModal) setShowShortcutsModal(false)
+        if (showNmmInfo) setShowNmmInfo(false)
+      }
+    }
+
+    window.addEventListener('keydown', handleKeyDown)
+    return () => window.removeEventListener('keydown', handleKeyDown)
+  }, [
+    complete,
+    cueIndex,
+    goTo,
+    replay,
+    section.cues.length,
+    sectionIndex,
+    seekToCue,
+    showNmmInfo,
+    showShortcutsModal,
+  ])
+
   const sectionElapsed = useMemo(
     () => section.cues.slice(0, cueIndex).reduce((t, c) => t + c.seconds, 0) + elapsed,
     [section, cueIndex, elapsed],
   )
   const total = sectionSeconds(section)
-  const progress = complete ? 100 : Math.min(100, (sectionElapsed / total) * 100)
   const isLast = sectionIndex === sections.length - 1
+
+  const cueSegments = useMemo(() => {
+    let currentStart = 0
+    return section.cues.map((c, i) => {
+      const start = currentStart
+      currentStart += c.seconds
+      return {
+        index: i,
+        start,
+        end: currentStart,
+        widthPct: (c.seconds / total) * 100,
+        text: c.text,
+      }
+    })
+  }, [section.cues, total])
 
   return (
     <div className="min-h-screen">
@@ -105,16 +221,43 @@ export default function SigningView({ settings, onExit, onOpenSettings }: Props)
           </h1>
           <p className="text-[16px] text-[var(--ink-soft)]">{documentMeta.source}</p>
         </div>
-        <Button variant="quiet" onClick={onOpenSettings} className="ml-auto px-0">
-          Settings
-        </Button>
+
+        <div className="ml-auto flex items-center gap-3">
+          <Button
+            variant="quiet"
+            onClick={() => setFocusMode((f) => !f)}
+            className="px-2"
+            title="Toggle Focus Mode (F)"
+          >
+            {focusMode ? 'Exit Focus Mode' : 'Focus Mode'}
+          </Button>
+          <Button
+            variant="quiet"
+            onClick={() => setShowShortcutsModal(true)}
+            className="px-2"
+            title="Keyboard shortcuts (?)"
+          >
+            Shortcuts (?)
+          </Button>
+          <Button variant="quiet" onClick={onOpenSettings} className="px-0">
+            Settings
+          </Button>
+        </div>
       </header>
 
-      <div className="grid items-start gap-0 lg:grid-cols-[300px_minmax(0,1fr)_380px]">
+      <div
+        className={`grid items-start gap-0 ${
+          focusMode
+            ? 'lg:grid-cols-[minmax(0,1fr)_420px]'
+            : 'lg:grid-cols-[300px_minmax(0,1fr)_380px]'
+        }`}
+      >
         {/* ── Zone B: section navigator ─────────────────────────────── */}
         <nav
           aria-label="Document sections"
-          className="quiet-scroll border-b-2 border-[var(--rule)] px-5 py-6 lg:sticky lg:top-0 lg:max-h-screen lg:overflow-y-auto lg:border-r-2 lg:border-b-0 lg:px-6"
+          className={`quiet-scroll border-b-2 border-[var(--rule)] px-5 py-6 lg:sticky lg:top-0 lg:max-h-screen lg:overflow-y-auto lg:border-r-2 lg:border-b-0 lg:px-6 ${
+            focusMode ? 'hidden' : 'block'
+          }`}
         >
           <h2 className="text-[17px] font-semibold tracking-[0.12em] text-[var(--ink-soft)] uppercase">
             Jump to a section
@@ -192,11 +335,38 @@ export default function SigningView({ settings, onExit, onOpenSettings }: Props)
               dimmed={complete}
             />
 
-            {/* Non-manual marker readout. Grammar made visible, not decoration. */}
+            {/* Non-manual marker readout with popover explanation */}
             {cue.nmm !== 'neutral' && !complete && (
-              <p className="absolute top-4 left-4 border-2 border-[#8FA3B5] px-3 py-1.5 text-[15px] font-semibold tracking-wide text-[#EDF1F5] uppercase">
-                {nonManualLabel[cue.nmm]} · {nonManualMeaning[cue.nmm]}
-              </p>
+              <div className="absolute top-4 left-4 z-20">
+                <button
+                  type="button"
+                  onClick={() => setShowNmmInfo((v) => !v)}
+                  aria-expanded={showNmmInfo}
+                  aria-label="Non-manual marker grammatical explanation"
+                  className="border-2 border-[#8FA3B5] bg-[#23292F]/90 px-3 py-1.5 text-left text-[15px] font-semibold tracking-wide text-[#EDF1F5] uppercase transition-colors hover:bg-[#23292F] hover:border-[#FAF9F6] cursor-pointer"
+                >
+                  {nonManualLabel[cue.nmm]} · {nonManualMeaning[cue.nmm]} ℹ
+                </button>
+                {showNmmInfo && (
+                  <div className="mt-2 max-w-sm border-2 border-[var(--ink)] bg-[#FAF9F6] p-4 text-[var(--ink)] shadow-lg">
+                    <div className="flex items-center justify-between border-b border-[var(--rule)] pb-2 mb-2">
+                      <span className="text-[14px] font-bold uppercase tracking-wider text-[var(--teal)]">
+                        NZSL Grammar: {nonManualLabel[cue.nmm]}
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() => setShowNmmInfo(false)}
+                        className="text-[16px] font-bold px-1 hover:text-[var(--teal)] cursor-pointer"
+                      >
+                        ✕
+                      </button>
+                    </div>
+                    <p className="text-[15px] leading-relaxed">
+                      {nmmGrammarExplanation[cue.nmm]}
+                    </p>
+                  </div>
+                )}
+              </div>
             )}
 
             {!playing && !complete && (
@@ -251,13 +421,48 @@ export default function SigningView({ settings, onExit, onOpenSettings }: Props)
             </p>
           </div>
 
-          {/* Section progress — visual only */}
-          <div className="mt-5 h-3 w-full border-2 border-[var(--rule)]">
+          {/* Interactive Scrub Bar — per cue marker */}
+          <div className="mt-5">
             <div
-              className="h-full bg-[var(--teal)] transition-[width] duration-150 ease-linear"
-              style={{ width: `${progress}%` }}
-            />
+              role="region"
+              aria-label="Section sentence timeline scrubber"
+              className="relative flex h-4 w-full cursor-pointer overflow-hidden border-2 border-[var(--rule)] bg-[#EFEDE6]"
+            >
+              {cueSegments.map((seg) => {
+                const isActive = seg.index === cueIndex && !complete
+                const isPassed = seg.index < cueIndex || complete
+                return (
+                  <button
+                    key={`${seg.text}-${seg.index}`}
+                    type="button"
+                    onClick={() => seekToCue(seg.index)}
+                    title={`Jump to sentence ${seg.index + 1}: "${seg.text}"`}
+                    style={{ width: `${seg.widthPct}%` }}
+                    className={`relative h-full border-r-2 border-[var(--paper)] last:border-r-0 transition-colors ${
+                      isActive
+                        ? 'bg-[var(--teal)]'
+                        : isPassed
+                          ? 'bg-[#8CA8A3]'
+                          : 'hover:bg-[#CBD6D3]'
+                    }`}
+                  >
+                    {isActive && !complete && (
+                      <div
+                        className="h-full bg-[var(--ink)] opacity-30 transition-[width] duration-150 ease-linear"
+                        style={{
+                          width: `${Math.min(
+                            100,
+                            (elapsed / section.cues[seg.index].seconds) * 100,
+                          )}%`,
+                        }}
+                      />
+                    )}
+                  </button>
+                )
+              })}
+            </div>
           </div>
+
           <p className="mt-2 flex flex-wrap gap-x-4 text-[17px] text-[var(--ink-soft)]">
             <span>
               <span className="font-semibold text-[var(--ink)]">{section.title}</span> · sentence{' '}
@@ -369,44 +574,64 @@ export default function SigningView({ settings, onExit, onOpenSettings }: Props)
 
           <h3 className="mt-6 text-[21px] font-semibold">{section.title}</h3>
 
+          {/* 1. Simplified mode active sentence highlighting */}
           {textMode === 'simplified' && (
-            <div className="mt-3 flex flex-col gap-4">
-              {section.simplified.split('\n\n').map((para) => (
-                <p key={para} className="max-w-[66ch] text-[19px] leading-[1.6]">
-                  {para}
-                </p>
-              ))}
+            <div className="mt-3 flex flex-col gap-3">
+              {section.cues.map((c, i) => {
+                const active = i === cueIndex && !complete
+                return (
+                  <button
+                    key={`${c.text}-${i}`}
+                    type="button"
+                    onClick={() => seekToCue(i)}
+                    className={`w-full text-left border-l-[6px] p-3.5 transition-all duration-150 rounded-r-md cursor-pointer ${
+                      active
+                        ? 'border-l-[var(--teal)] bg-[#E6EFEE] font-medium shadow-xs'
+                        : 'border-l-transparent bg-transparent hover:bg-[#EFEDE6]/60 text-[var(--ink)]'
+                    }`}
+                  >
+                    <p className="max-w-[66ch] text-[19px] leading-[1.6]">{c.text}</p>
+                  </button>
+                )
+              })}
             </div>
           )}
 
+          {/* Original mode left undivided as single block */}
           {textMode === 'original' && (
             <p className="mt-3 max-w-[66ch] border-l-[6px] border-[var(--rule)] pl-4 text-[17px] leading-[1.6] text-[var(--ink-soft)]">
               {section.original}
             </p>
           )}
 
+          {/* 3. Gloss mode click-to-seek */}
           {textMode === 'gloss' && (
-            <div className="mt-3 flex flex-col gap-6">
-              {section.cues.map((c, i) => (
-                <div
-                  key={c.text}
-                  className={`border-l-[6px] pl-4 ${
-                    i === cueIndex && !complete
-                      ? 'border-l-[var(--teal)]'
-                      : 'border-l-[var(--rule)]'
-                  }`}
-                >
-                  <p className="text-[15px] font-semibold tracking-wide text-[var(--teal)] uppercase">
-                    {nonManualLabel[c.nmm]} — {nonManualMeaning[c.nmm]}
-                  </p>
-                  <p className="mt-1.5 flex flex-wrap gap-x-2 gap-y-1 text-[19px] font-bold tracking-wide">
-                    {c.gloss.map((g, gi) => (
-                      <span key={`${g.sign}-${gi}`}>{g.sign}</span>
-                    ))}
-                  </p>
-                  <p className="mt-1.5 text-[17px] text-[var(--ink-soft)]">{c.text}</p>
-                </div>
-              ))}
+            <div className="mt-3 flex flex-col gap-4">
+              {section.cues.map((c, i) => {
+                const active = i === cueIndex && !complete
+                return (
+                  <button
+                    key={`${c.text}-${i}`}
+                    type="button"
+                    onClick={() => seekToCue(i)}
+                    className={`w-full text-left border-l-[6px] p-3.5 transition-colors duration-150 rounded-r-md cursor-pointer ${
+                      active
+                        ? 'border-l-[var(--teal)] bg-[#E6EFEE]'
+                        : 'border-l-[var(--rule)] hover:bg-[#EFEDE6]/60'
+                    }`}
+                  >
+                    <p className="text-[15px] font-semibold tracking-wide text-[var(--teal)] uppercase">
+                      {nonManualLabel[c.nmm]} — {nonManualMeaning[c.nmm]}
+                    </p>
+                    <p className="mt-1.5 flex flex-wrap gap-x-2 gap-y-1 text-[19px] font-bold tracking-wide">
+                      {c.gloss.map((g, gi) => (
+                        <span key={`${g.sign}-${gi}`}>{g.sign}</span>
+                      ))}
+                    </p>
+                    <p className="mt-1.5 text-[17px] text-[var(--ink-soft)]">{c.text}</p>
+                  </button>
+                )
+              })}
             </div>
           )}
 
@@ -427,6 +652,94 @@ export default function SigningView({ settings, onExit, onOpenSettings }: Props)
           </p>
         </aside>
       </div>
+
+      {/* Shortcuts reference modal overlay */}
+      {showShortcutsModal && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4"
+          onClick={() => setShowShortcutsModal(false)}
+        >
+          <div
+            className="w-full max-w-md border-2 border-[var(--ink)] bg-[#FAF9F6] p-6 text-[var(--ink)] shadow-xl"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-center justify-between border-b-2 border-[var(--rule)] pb-3 mb-4">
+              <h3 className="text-[20px] font-bold">Keyboard Shortcuts</h3>
+              <button
+                type="button"
+                onClick={() => setShowShortcutsModal(false)}
+                className="text-[20px] font-bold px-2 py-1 hover:bg-[#EFEDE6] cursor-pointer"
+              >
+                ✕
+              </button>
+            </div>
+            <ul className="flex flex-col gap-2.5 text-[16px]">
+              <li className="flex justify-between items-center">
+                <span>Play / Pause</span>
+                <span>
+                  <kbd className="border border-[var(--ink)] bg-[#EFEDE6] px-2 py-0.5 font-mono text-[14px]">
+                    Space
+                  </kbd>{' '}
+                  or{' '}
+                  <kbd className="border border-[var(--ink)] bg-[#EFEDE6] px-2 py-0.5 font-mono text-[14px]">
+                    K
+                  </kbd>
+                </span>
+              </li>
+              <li className="flex justify-between items-center">
+                <span>Replay section</span>
+                <kbd className="border border-[var(--ink)] bg-[#EFEDE6] px-2 py-0.5 font-mono text-[14px]">
+                  R
+                </kbd>
+              </li>
+              <li className="flex justify-between items-center">
+                <span>Previous / Next cue</span>
+                <span>
+                  <kbd className="border border-[var(--ink)] bg-[#EFEDE6] px-2 py-0.5 font-mono text-[14px]">
+                    ←
+                  </kbd>{' '}
+                  /{' '}
+                  <kbd className="border border-[var(--ink)] bg-[#EFEDE6] px-2 py-0.5 font-mono text-[14px]">
+                    →
+                  </kbd>
+                </span>
+              </li>
+              <li className="flex justify-between items-center">
+                <span>Signing speed</span>
+                <span>
+                  <kbd className="border border-[var(--ink)] bg-[#EFEDE6] px-2 py-0.5 font-mono text-[14px]">
+                    1
+                  </kbd>{' '}
+                  <kbd className="border border-[var(--ink)] bg-[#EFEDE6] px-2 py-0.5 font-mono text-[14px]">
+                    2
+                  </kbd>{' '}
+                  <kbd className="border border-[var(--ink)] bg-[#EFEDE6] px-2 py-0.5 font-mono text-[14px]">
+                    3
+                  </kbd>
+                </span>
+              </li>
+              <li className="flex justify-between items-center">
+                <span>Cycle text mode</span>
+                <kbd className="border border-[var(--ink)] bg-[#EFEDE6] px-2 py-0.5 font-mono text-[14px]">
+                  T
+                </kbd>
+              </li>
+              <li className="flex justify-between items-center">
+                <span>Focus / Theater mode</span>
+                <kbd className="border border-[var(--ink)] bg-[#EFEDE6] px-2 py-0.5 font-mono text-[14px]">
+                  F
+                </kbd>
+              </li>
+              <li className="flex justify-between items-center">
+                <span>Toggle shortcuts guide</span>
+                <kbd className="border border-[var(--ink)] bg-[#EFEDE6] px-2 py-0.5 font-mono text-[14px]">
+                  ?
+                </kbd>
+              </li>
+            </ul>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
