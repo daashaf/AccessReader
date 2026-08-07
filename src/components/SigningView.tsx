@@ -30,9 +30,10 @@ interface Props {
   settings: Settings
   onExit: () => void
   onOpenSettings: () => void
+  onSettingsChange: (settings: Settings) => void
 }
 
-export default function SigningView({ settings, onExit, onOpenSettings }: Props) {
+export default function SigningView({ settings, onExit, onOpenSettings, onSettingsChange }: Props) {
   const [sectionIndex, setSectionIndex] = useState(0)
   const [cueIndex, setCueIndex] = useState(0)
   const [elapsed, setElapsed] = useState(0)
@@ -48,6 +49,11 @@ export default function SigningView({ settings, onExit, onOpenSettings }: Props)
 
   // Playback clock. 120ms ticks are enough to drive subtitles and the progress
   // bar; the avatar runs its own animation frame loop.
+  useEffect(() => {
+    // keep local speed in sync with global settings
+    setSpeed(settings.defaultSpeed)
+  }, [settings.defaultSpeed])
+
   useEffect(() => {
     if (!playing || complete) return
     const id = setInterval(() => setElapsed((e) => e + 0.12 * speed), 120)
@@ -241,15 +247,17 @@ export default function SigningView({ settings, onExit, onOpenSettings }: Props)
             )}
           </div>
 
-          {/* Subtitle bar */}
-          <div className="border-2 border-t-0 border-[var(--ink)] bg-[var(--ink)] px-6 py-5">
-            <p
-              className="mx-auto max-w-[42ch] text-center leading-[1.5] font-medium text-[#FAF9F6]"
-              style={{ fontSize: `${subtitlePx[settings.subtitleSize]}px` }}
-            >
-              {complete ? 'End of this section.' : cue.text}
-            </p>
-          </div>
+          {/* Subtitle bar — only show when user wants original text visible */}
+          {settings.alwaysOriginal && (
+            <div className="border-2 border-t-0 border-[var(--ink)] bg-[var(--ink)] px-6 py-5">
+              <p
+                className="mx-auto max-w-[42ch] text-center leading-[1.5] font-medium text-[#FAF9F6]"
+                style={{ fontSize: `${subtitlePx[settings.subtitleSize]}px` }}
+              >
+                {complete ? 'End of this section.' : cue.text}
+              </p>
+            </div>
+          )}
 
           {/* Section progress — visual only */}
           <div className="mt-5 h-3 w-full border-2 border-[var(--rule)]">
@@ -302,7 +310,10 @@ export default function SigningView({ settings, onExit, onOpenSettings }: Props)
                     key={s}
                     type="button"
                     aria-pressed={on}
-                    onClick={() => setSpeed(s)}
+                    onClick={() => {
+                      setSpeed(s)
+                      onSettingsChange({ ...settings, defaultSpeed: s })
+                    }}
                     className={`min-h-[44px] border-2 px-5 text-[18px] transition-colors duration-150 ${
                       i > 0 ? '-ml-0.5' : ''
                     } ${

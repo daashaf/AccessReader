@@ -8,13 +8,28 @@ type Screen = 'home' | 'processing' | 'signing' | 'settings'
 
 export default function App() {
   const [screen, setScreen] = useState<Screen>('home')
-  const [settings, setSettings] = useState<Settings>(defaultSettings)
+  const [settings, setSettings] = useState<Settings>(() => {
+    try {
+      const raw = localStorage.getItem('access-reader:settings')
+      return raw ? (JSON.parse(raw) as Settings) : defaultSettings
+    } catch (e) {
+      return defaultSettings
+    }
+  })
 
   // Contrast mode is a document-level preference, so it drives a root attribute
   // rather than being threaded through every component.
   useEffect(() => {
     document.documentElement.dataset.contrast = settings.contrast
   }, [settings.contrast])
+
+  useEffect(() => {
+    try {
+      localStorage.setItem('access-reader:settings', JSON.stringify(settings))
+    } catch (e) {
+      // ignore storage errors
+    }
+  }, [settings])
 
   return (
     <div className="min-h-screen bg-[var(--paper)] text-[var(--ink)]">
@@ -37,6 +52,7 @@ export default function App() {
             settings={settings}
             onExit={() => setScreen('home')}
             onOpenSettings={() => setScreen('settings')}
+            onSettingsChange={setSettings}
           />
         )}
         {screen === 'settings' && (
