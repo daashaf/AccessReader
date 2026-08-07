@@ -404,17 +404,18 @@ export default function SigningView({ documentMeta, sections, settings, onExit, 
             )}
           </div>
 
-          {/* Subtitle bar — only show when user wants original text visible */}
-          {settings.alwaysOriginal && (
-            <div className="border-2 border-t-0 border-[var(--ink)] bg-[var(--ink)] px-6 py-5">
-              <p
-                className="mx-auto max-w-[42ch] text-center leading-[1.5] font-medium text-[#FAF9F6]"
-                style={{ fontSize: `${subtitlePx[settings.subtitleSize]}px` }}
-              >
-                {complete ? 'End of this section.' : cue.text}
-              </p>
-            </div>
-          )}
+          {/* Subtitle bar. Always visible — captions are core to this app's
+              purpose, not something to gate behind a setting. `alwaysOriginal`
+              controls a separate persistent original-text block further down,
+              not these captions. */}
+          <div className="border-2 border-t-0 border-[var(--ink)] bg-[var(--ink)] px-6 py-5">
+            <p
+              className="mx-auto max-w-[42ch] text-center leading-[1.5] font-medium text-[#FAF9F6]"
+              style={{ fontSize: `${subtitlePx[settings.subtitleSize]}px` }}
+            >
+              {complete ? 'End of this section.' : cue.text}
+            </p>
+          </div>
 
           {/* Interactive scrub bar — one clickable segment per sentence,
               replacing the old single fill bar so any sentence in the
