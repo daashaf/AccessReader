@@ -76,7 +76,7 @@ export function PositioningPanel() {
           <p className="mt-2 max-w-[62ch] text-[18px] text-[var(--ink-soft)]">
             The World Federation of the Deaf and WASLI have warned against signing
             avatars being used as a replacement for human interpreters, and they are
-            right. Access Reader is for the everyday documents that will never get an
+            right. Kindred is for the everyday documents that will never get an
             interpreter at all — the rates notice, the tenancy letter, the form in the
             letterbox.
           </p>

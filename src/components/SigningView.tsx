@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import SigningAvatar from './SigningAvatar'
 import { Button, Tick, DisclosureStrip } from './ui'
+<<<<<<< HEAD
 import {
   documentMeta,
   formatDuration,
@@ -10,7 +11,12 @@ import {
   sectionSeconds,
   type NonManual,
 } from '../data/document'
+=======
+import { formatDuration, nonManualLabel, nonManualMeaning, sectionSeconds } from '../data/document'
+import type { Section, NonManual } from '../data/document'
+>>>>>>> 85b4d15d5c8709a88fcb712e80f3e89a2d4a77ca
 import type { Settings } from './SettingsScreen'
+import type { DocumentMeta } from '../lib/api'
 
 type TextMode = 'simplified' | 'original' | 'gloss'
 
@@ -41,12 +47,15 @@ const nmmGrammarExplanation: Record<NonManual, string> = {
 }
 
 interface Props {
+  documentMeta: DocumentMeta
+  sections: Section[]
   settings: Settings
   onExit: () => void
   onOpenSettings: () => void
+  onSettingsChange: (settings: Settings) => void
 }
 
-export default function SigningView({ settings, onExit, onOpenSettings }: Props) {
+export default function SigningView({ documentMeta, sections, settings, onExit, onOpenSettings, onSettingsChange }: Props) {
   const [sectionIndex, setSectionIndex] = useState(0)
   const [cueIndex, setCueIndex] = useState(0)
   const [elapsed, setElapsed] = useState(0)
@@ -58,13 +67,21 @@ export default function SigningView({ settings, onExit, onOpenSettings }: Props)
   const [focusMode, setFocusMode] = useState(false)
   const [showNmmInfo, setShowNmmInfo] = useState(false)
   const [showShortcutsModal, setShowShortcutsModal] = useState(false)
+<<<<<<< HEAD
 
+=======
+>>>>>>> 85b4d15d5c8709a88fcb712e80f3e89a2d4a77ca
   const nextButton = useRef<HTMLButtonElement>(null)
 
   const section = sections[sectionIndex]
   const cue = section.cues[cueIndex]
 
   // Playback clock. 120ms ticks drive subtitles and the progress bar.
+  useEffect(() => {
+    // keep local speed in sync with global settings
+    setSpeed(settings.defaultSpeed)
+  }, [settings.defaultSpeed])
+
   useEffect(() => {
     if (!playing || complete) return
     const id = setInterval(() => setElapsed((e) => e + 0.12 * speed), 120)
@@ -109,7 +126,12 @@ export default function SigningView({ settings, onExit, onOpenSettings }: Props)
     setPlaying(true)
   }, [])
 
+<<<<<<< HEAD
   // Keyboard shortcuts listener scoped to this screen
+=======
+  // Keyboard shortcuts, scoped to this screen and skipped while any real
+  // text input has focus so they never interfere with typing elsewhere.
+>>>>>>> 85b4d15d5c8709a88fcb712e80f3e89a2d4a77ca
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       const target = e.target as HTMLElement | null
@@ -158,9 +180,13 @@ export default function SigningView({ settings, onExit, onOpenSettings }: Props)
         setSpeed(1.25)
       } else if (e.key === 't' || e.key === 'T') {
         e.preventDefault()
+<<<<<<< HEAD
         setTextMode((m) =>
           m === 'simplified' ? 'original' : m === 'original' ? 'gloss' : 'simplified',
         )
+=======
+        setTextMode((m) => (m === 'simplified' ? 'original' : m === 'original' ? 'gloss' : 'simplified'))
+>>>>>>> 85b4d15d5c8709a88fcb712e80f3e89a2d4a77ca
       } else if (e.key === 'f' || e.key === 'F') {
         e.preventDefault()
         setFocusMode((f) => !f)
@@ -182,6 +208,10 @@ export default function SigningView({ settings, onExit, onOpenSettings }: Props)
     replay,
     section.cues.length,
     sectionIndex,
+<<<<<<< HEAD
+=======
+    sections.length,
+>>>>>>> 85b4d15d5c8709a88fcb712e80f3e89a2d4a77ca
     seekToCue,
     showNmmInfo,
     showShortcutsModal,
@@ -199,6 +229,7 @@ export default function SigningView({ settings, onExit, onOpenSettings }: Props)
     return section.cues.map((c, i) => {
       const start = currentStart
       currentStart += c.seconds
+<<<<<<< HEAD
       return {
         index: i,
         start,
@@ -206,6 +237,9 @@ export default function SigningView({ settings, onExit, onOpenSettings }: Props)
         widthPct: (c.seconds / total) * 100,
         text: c.text,
       }
+=======
+      return { index: i, start, end: currentStart, widthPct: (c.seconds / total) * 100, text: c.text }
+>>>>>>> 85b4d15d5c8709a88fcb712e80f3e89a2d4a77ca
     })
   }, [section.cues, total])
 
@@ -247,9 +281,13 @@ export default function SigningView({ settings, onExit, onOpenSettings }: Props)
 
       <div
         className={`grid items-start gap-0 ${
+<<<<<<< HEAD
           focusMode
             ? 'lg:grid-cols-[minmax(0,1fr)_420px]'
             : 'lg:grid-cols-[300px_minmax(0,1fr)_380px]'
+=======
+          focusMode ? 'lg:grid-cols-[minmax(0,1fr)_420px]' : 'lg:grid-cols-[300px_minmax(0,1fr)_380px]'
+>>>>>>> 85b4d15d5c8709a88fcb712e80f3e89a2d4a77ca
         }`}
       >
         {/* ── Zone B: section navigator ─────────────────────────────── */}
@@ -335,7 +373,12 @@ export default function SigningView({ settings, onExit, onOpenSettings }: Props)
               dimmed={complete}
             />
 
+<<<<<<< HEAD
             {/* Non-manual marker readout with popover explanation */}
+=======
+            {/* Non-manual marker readout, with a click-through explanation of
+                its NZSL grammatical function. Grammar made visible, not decoration. */}
+>>>>>>> 85b4d15d5c8709a88fcb712e80f3e89a2d4a77ca
             {cue.nmm !== 'neutral' && !complete && (
               <div className="absolute top-4 left-4 z-20">
                 <button
@@ -343,27 +386,44 @@ export default function SigningView({ settings, onExit, onOpenSettings }: Props)
                   onClick={() => setShowNmmInfo((v) => !v)}
                   aria-expanded={showNmmInfo}
                   aria-label="Non-manual marker grammatical explanation"
+<<<<<<< HEAD
                   className="border-2 border-[#8FA3B5] bg-[#23292F]/90 px-3 py-1.5 text-left text-[15px] font-semibold tracking-wide text-[#EDF1F5] uppercase transition-colors hover:bg-[#23292F] hover:border-[#FAF9F6] cursor-pointer"
+=======
+                  className="border-2 border-[#8FA3B5] bg-[#23292F]/90 px-3 py-1.5 text-left text-[15px] font-semibold tracking-wide text-[#EDF1F5] uppercase transition-colors hover:border-[#FAF9F6] hover:bg-[#23292F]"
+>>>>>>> 85b4d15d5c8709a88fcb712e80f3e89a2d4a77ca
                 >
                   {nonManualLabel[cue.nmm]} · {nonManualMeaning[cue.nmm]} ℹ
                 </button>
                 {showNmmInfo && (
                   <div className="mt-2 max-w-sm border-2 border-[var(--ink)] bg-[#FAF9F6] p-4 text-[var(--ink)] shadow-lg">
+<<<<<<< HEAD
                     <div className="flex items-center justify-between border-b border-[var(--rule)] pb-2 mb-2">
                       <span className="text-[14px] font-bold uppercase tracking-wider text-[var(--teal)]">
+=======
+                    <div className="mb-2 flex items-center justify-between border-b border-[var(--rule)] pb-2">
+                      <span className="text-[14px] font-bold tracking-wider text-[var(--teal)] uppercase">
+>>>>>>> 85b4d15d5c8709a88fcb712e80f3e89a2d4a77ca
                         NZSL Grammar: {nonManualLabel[cue.nmm]}
                       </span>
                       <button
                         type="button"
                         onClick={() => setShowNmmInfo(false)}
+<<<<<<< HEAD
                         className="text-[16px] font-bold px-1 hover:text-[var(--teal)] cursor-pointer"
+=======
+                        className="px-1 text-[16px] font-bold hover:text-[var(--teal)]"
+>>>>>>> 85b4d15d5c8709a88fcb712e80f3e89a2d4a77ca
                       >
                         ✕
                       </button>
                     </div>
+<<<<<<< HEAD
                     <p className="text-[15px] leading-relaxed">
                       {nmmGrammarExplanation[cue.nmm]}
                     </p>
+=======
+                    <p className="text-[15px] leading-relaxed">{nmmGrammarExplanation[cue.nmm]}</p>
+>>>>>>> 85b4d15d5c8709a88fcb712e80f3e89a2d4a77ca
                   </div>
                 )}
               </div>
@@ -411,7 +471,10 @@ export default function SigningView({ settings, onExit, onOpenSettings }: Props)
             )}
           </div>
 
-          {/* Subtitle bar */}
+          {/* Subtitle bar. Always visible — captions are core to this app's
+              purpose, not something to gate behind a setting. `alwaysOriginal`
+              controls a separate persistent original-text block further down,
+              not these captions. */}
           <div className="border-2 border-t-0 border-[var(--ink)] bg-[var(--ink)] px-6 py-5">
             <p
               className="mx-auto max-w-[42ch] text-center leading-[1.5] font-medium text-[#FAF9F6]"
@@ -421,12 +484,22 @@ export default function SigningView({ settings, onExit, onOpenSettings }: Props)
             </p>
           </div>
 
+<<<<<<< HEAD
           {/* Interactive Scrub Bar — per cue marker */}
+=======
+          {/* Interactive scrub bar — one clickable segment per sentence,
+              replacing the old single fill bar so any sentence in the
+              section can be jumped to directly. */}
+>>>>>>> 85b4d15d5c8709a88fcb712e80f3e89a2d4a77ca
           <div className="mt-5">
             <div
               role="region"
               aria-label="Section sentence timeline scrubber"
+<<<<<<< HEAD
               className="relative flex h-4 w-full cursor-pointer overflow-hidden border-2 border-[var(--rule)] bg-[#EFEDE6]"
+=======
+              className="relative flex h-4 w-full overflow-hidden border-2 border-[var(--rule)] bg-[#EFEDE6]"
+>>>>>>> 85b4d15d5c8709a88fcb712e80f3e89a2d4a77ca
             >
               {cueSegments.map((seg) => {
                 const isActive = seg.index === cueIndex && !complete
@@ -438,22 +511,31 @@ export default function SigningView({ settings, onExit, onOpenSettings }: Props)
                     onClick={() => seekToCue(seg.index)}
                     title={`Jump to sentence ${seg.index + 1}: "${seg.text}"`}
                     style={{ width: `${seg.widthPct}%` }}
+<<<<<<< HEAD
                     className={`relative h-full border-r-2 border-[var(--paper)] last:border-r-0 transition-colors ${
                       isActive
                         ? 'bg-[var(--teal)]'
                         : isPassed
                           ? 'bg-[#8CA8A3]'
                           : 'hover:bg-[#CBD6D3]'
+=======
+                    className={`relative h-full border-r-2 border-[var(--paper)] transition-colors last:border-r-0 ${
+                      isActive ? 'bg-[var(--teal)]' : isPassed ? 'bg-[#8CA8A3]' : 'hover:bg-[#CBD6D3]'
+>>>>>>> 85b4d15d5c8709a88fcb712e80f3e89a2d4a77ca
                     }`}
                   >
                     {isActive && !complete && (
                       <div
                         className="h-full bg-[var(--ink)] opacity-30 transition-[width] duration-150 ease-linear"
                         style={{
+<<<<<<< HEAD
                           width: `${Math.min(
                             100,
                             (elapsed / section.cues[seg.index].seconds) * 100,
                           )}%`,
+=======
+                          width: `${Math.min(100, (elapsed / section.cues[seg.index].seconds) * 100)}%`,
+>>>>>>> 85b4d15d5c8709a88fcb712e80f3e89a2d4a77ca
                         }}
                       />
                     )}
@@ -507,7 +589,10 @@ export default function SigningView({ settings, onExit, onOpenSettings }: Props)
                     key={s}
                     type="button"
                     aria-pressed={on}
-                    onClick={() => setSpeed(s)}
+                    onClick={() => {
+                      setSpeed(s)
+                      onSettingsChange({ ...settings, defaultSpeed: s })
+                    }}
                     className={`min-h-[44px] border-2 px-5 text-[18px] transition-colors duration-150 ${
                       i > 0 ? '-ml-0.5' : ''
                     } ${
@@ -574,7 +659,15 @@ export default function SigningView({ settings, onExit, onOpenSettings }: Props)
 
           <h3 className="mt-6 text-[21px] font-semibold">{section.title}</h3>
 
+<<<<<<< HEAD
           {/* 1. Simplified mode active sentence highlighting */}
+=======
+          {/* Simplified mode: rendered per-cue (rather than by paragraph) so
+              the sentence currently being signed can be highlighted, and
+              clicking any sentence seeks playback straight to it. Cues are
+              already sentence-split from `simplified` server-side, so this
+              needs no new data. */}
+>>>>>>> 85b4d15d5c8709a88fcb712e80f3e89a2d4a77ca
           {textMode === 'simplified' && (
             <div className="mt-3 flex flex-col gap-3">
               {section.cues.map((c, i) => {
@@ -584,10 +677,17 @@ export default function SigningView({ settings, onExit, onOpenSettings }: Props)
                     key={`${c.text}-${i}`}
                     type="button"
                     onClick={() => seekToCue(i)}
+<<<<<<< HEAD
                     className={`w-full text-left border-l-[6px] p-3.5 transition-all duration-150 rounded-r-md cursor-pointer ${
                       active
                         ? 'border-l-[var(--teal)] bg-[#E6EFEE] font-medium shadow-xs'
                         : 'border-l-transparent bg-transparent hover:bg-[#EFEDE6]/60 text-[var(--ink)]'
+=======
+                    className={`w-full rounded-r-md border-l-[6px] p-3.5 text-left transition-all duration-150 ${
+                      active
+                        ? 'border-l-[var(--teal)] bg-[#E6EFEE] font-medium shadow-xs'
+                        : 'border-l-transparent bg-transparent text-[var(--ink)] hover:bg-[#EFEDE6]/60'
+>>>>>>> 85b4d15d5c8709a88fcb712e80f3e89a2d4a77ca
                     }`}
                   >
                     <p className="max-w-[66ch] text-[19px] leading-[1.6]">{c.text}</p>
@@ -597,7 +697,13 @@ export default function SigningView({ settings, onExit, onOpenSettings }: Props)
             </div>
           )}
 
+<<<<<<< HEAD
           {/* Original mode left undivided as single block */}
+=======
+          {/* Original mode intentionally stays a single undivided block —
+              the source text has no per-sentence boundaries that line up
+              with cues today, so no active-sentence highlighting here. */}
+>>>>>>> 85b4d15d5c8709a88fcb712e80f3e89a2d4a77ca
           {textMode === 'original' && (
             <p className="mt-3 max-w-[66ch] border-l-[6px] border-[var(--rule)] pl-4 text-[17px] leading-[1.6] text-[var(--ink-soft)]">
               {section.original}
@@ -614,10 +720,15 @@ export default function SigningView({ settings, onExit, onOpenSettings }: Props)
                     key={`${c.text}-${i}`}
                     type="button"
                     onClick={() => seekToCue(i)}
+<<<<<<< HEAD
                     className={`w-full text-left border-l-[6px] p-3.5 transition-colors duration-150 rounded-r-md cursor-pointer ${
                       active
                         ? 'border-l-[var(--teal)] bg-[#E6EFEE]'
                         : 'border-l-[var(--rule)] hover:bg-[#EFEDE6]/60'
+=======
+                    className={`w-full rounded-r-md border-l-[6px] p-3.5 text-left transition-colors duration-150 ${
+                      active ? 'border-l-[var(--teal)] bg-[#E6EFEE]' : 'border-l-[var(--rule)] hover:bg-[#EFEDE6]/60'
+>>>>>>> 85b4d15d5c8709a88fcb712e80f3e89a2d4a77ca
                     }`}
                   >
                     <p className="text-[15px] font-semibold tracking-wide text-[var(--teal)] uppercase">
@@ -653,7 +764,11 @@ export default function SigningView({ settings, onExit, onOpenSettings }: Props)
         </aside>
       </div>
 
+<<<<<<< HEAD
       {/* Shortcuts reference modal overlay */}
+=======
+      {/* Keyboard shortcuts reference overlay */}
+>>>>>>> 85b4d15d5c8709a88fcb712e80f3e89a2d4a77ca
       {showShortcutsModal && (
         <div
           className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4"
@@ -663,18 +778,30 @@ export default function SigningView({ settings, onExit, onOpenSettings }: Props)
             className="w-full max-w-md border-2 border-[var(--ink)] bg-[#FAF9F6] p-6 text-[var(--ink)] shadow-xl"
             onClick={(e) => e.stopPropagation()}
           >
+<<<<<<< HEAD
             <div className="flex items-center justify-between border-b-2 border-[var(--rule)] pb-3 mb-4">
+=======
+            <div className="mb-4 flex items-center justify-between border-b-2 border-[var(--rule)] pb-3">
+>>>>>>> 85b4d15d5c8709a88fcb712e80f3e89a2d4a77ca
               <h3 className="text-[20px] font-bold">Keyboard Shortcuts</h3>
               <button
                 type="button"
                 onClick={() => setShowShortcutsModal(false)}
+<<<<<<< HEAD
                 className="text-[20px] font-bold px-2 py-1 hover:bg-[#EFEDE6] cursor-pointer"
+=======
+                className="px-2 py-1 text-[20px] font-bold hover:bg-[#EFEDE6]"
+>>>>>>> 85b4d15d5c8709a88fcb712e80f3e89a2d4a77ca
               >
                 ✕
               </button>
             </div>
             <ul className="flex flex-col gap-2.5 text-[16px]">
+<<<<<<< HEAD
               <li className="flex justify-between items-center">
+=======
+              <li className="flex items-center justify-between">
+>>>>>>> 85b4d15d5c8709a88fcb712e80f3e89a2d4a77ca
                 <span>Play / Pause</span>
                 <span>
                   <kbd className="border border-[var(--ink)] bg-[#EFEDE6] px-2 py-0.5 font-mono text-[14px]">
@@ -686,14 +813,23 @@ export default function SigningView({ settings, onExit, onOpenSettings }: Props)
                   </kbd>
                 </span>
               </li>
+<<<<<<< HEAD
               <li className="flex justify-between items-center">
+=======
+              <li className="flex items-center justify-between">
+>>>>>>> 85b4d15d5c8709a88fcb712e80f3e89a2d4a77ca
                 <span>Replay section</span>
                 <kbd className="border border-[var(--ink)] bg-[#EFEDE6] px-2 py-0.5 font-mono text-[14px]">
                   R
                 </kbd>
               </li>
+<<<<<<< HEAD
               <li className="flex justify-between items-center">
                 <span>Previous / Next cue</span>
+=======
+              <li className="flex items-center justify-between">
+                <span>Previous / Next sentence</span>
+>>>>>>> 85b4d15d5c8709a88fcb712e80f3e89a2d4a77ca
                 <span>
                   <kbd className="border border-[var(--ink)] bg-[#EFEDE6] px-2 py-0.5 font-mono text-[14px]">
                     ←
@@ -704,7 +840,11 @@ export default function SigningView({ settings, onExit, onOpenSettings }: Props)
                   </kbd>
                 </span>
               </li>
+<<<<<<< HEAD
               <li className="flex justify-between items-center">
+=======
+              <li className="flex items-center justify-between">
+>>>>>>> 85b4d15d5c8709a88fcb712e80f3e89a2d4a77ca
                 <span>Signing speed</span>
                 <span>
                   <kbd className="border border-[var(--ink)] bg-[#EFEDE6] px-2 py-0.5 font-mono text-[14px]">
@@ -718,20 +858,33 @@ export default function SigningView({ settings, onExit, onOpenSettings }: Props)
                   </kbd>
                 </span>
               </li>
+<<<<<<< HEAD
               <li className="flex justify-between items-center">
+=======
+              <li className="flex items-center justify-between">
+>>>>>>> 85b4d15d5c8709a88fcb712e80f3e89a2d4a77ca
                 <span>Cycle text mode</span>
                 <kbd className="border border-[var(--ink)] bg-[#EFEDE6] px-2 py-0.5 font-mono text-[14px]">
                   T
                 </kbd>
               </li>
+<<<<<<< HEAD
               <li className="flex justify-between items-center">
+=======
+              <li className="flex items-center justify-between">
+>>>>>>> 85b4d15d5c8709a88fcb712e80f3e89a2d4a77ca
                 <span>Focus / Theater mode</span>
                 <kbd className="border border-[var(--ink)] bg-[#EFEDE6] px-2 py-0.5 font-mono text-[14px]">
                   F
                 </kbd>
               </li>
+<<<<<<< HEAD
               <li className="flex justify-between items-center">
                 <span>Toggle shortcuts guide</span>
+=======
+              <li className="flex items-center justify-between">
+                <span>Toggle this guide</span>
+>>>>>>> 85b4d15d5c8709a88fcb712e80f3e89a2d4a77ca
                 <kbd className="border border-[var(--ink)] bg-[#EFEDE6] px-2 py-0.5 font-mono text-[14px]">
                   ?
                 </kbd>

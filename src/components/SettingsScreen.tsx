@@ -1,4 +1,5 @@
 import { Button } from './ui'
+import { useEffect, useRef } from 'react'
 
 export type Contrast = 'default' | 'high'
 export type SubtitleSize = 'medium' | 'large' | 'x-large'
@@ -71,16 +72,28 @@ export default function SettingsScreen({ settings, onChange, onBack }: Props) {
   const set = <K extends keyof Settings>(key: K, value: Settings[K]) =>
     onChange({ ...settings, [key]: value })
 
+  const headingRef = useRef<HTMLHeadingElement | null>(null)
+
+  useEffect(() => {
+    // Move focus to the settings heading when the screen is shown
+    headingRef.current?.focus()
+  }, [])
+
   return (
     <div className="min-h-screen">
       <header className="flex items-center gap-x-6 border-b-2 border-[var(--rule)] px-6 py-4 md:px-8">
         <Button variant="quiet" onClick={onBack} className="px-0">
           ← Back to document
         </Button>
-        <h1 className="text-[20px] leading-tight font-semibold">Settings</h1>
+        <h1 tabIndex={-1} ref={headingRef} className="text-[20px] leading-tight font-semibold">
+          Settings
+        </h1>
       </header>
 
       <main className="mx-auto flex max-w-[62ch] flex-col gap-9 px-6 py-8 md:px-8">
+        <p aria-live="polite" aria-atomic="true" className="sr-only">
+          {`Contrast: ${settings.contrast}. Subtitle size: ${settings.subtitleSize}. Avatar size: ${settings.avatarSize}. Signing speed: ${settings.defaultSpeed}x. Always show original text: ${settings.alwaysOriginal ? 'on' : 'off'}.`}
+        </p>
         <OptionGroup
           legend="Contrast"
           value={settings.contrast}

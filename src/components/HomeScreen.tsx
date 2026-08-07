@@ -1,9 +1,18 @@
-import type { ReactNode } from 'react'
+import { useRef, useState, type ReactNode } from 'react'
 import { documentMeta } from '../data/document'
-import { PositioningPanel, Roadmap } from './ui'
+import { PositioningPanel, Roadmap, Button } from './ui'
+import { fileToBase64 } from '../lib/image'
+
+export type DocumentInput =
+  | { kind: 'image'; data: string; mediaType: string }
+  | { kind: 'text'; text: string }
+  | { kind: 'sample' }
 
 interface Props {
-  onStart: (method: string) => void
+  onStart: (input: DocumentInput) => void
+  error?: string | null
+  /** Repopulates the paste box after a failed attempt so it need not be retyped. */
+  initialText?: string
 }
 
 const stroke = {
@@ -41,16 +50,19 @@ function Card({
   label,
   note,
   onClick,
+  expanded,
 }: {
   icon: ReactNode
   label: string
   note: string
   onClick: () => void
+  expanded?: boolean
 }) {
   return (
     <button
       type="button"
       onClick={onClick}
+      aria-expanded={expanded}
       className="group flex min-h-[220px] flex-col items-start gap-5 border-2 border-[var(--ink)] bg-transparent p-7 text-left transition-colors duration-150 hover:bg-[var(--ink)] hover:text-[var(--paper)]"
     >
       <span className="text-[var(--teal)] transition-colors duration-150 group-hover:text-[var(--paper)]">
@@ -66,19 +78,61 @@ function Card({
   )
 }
 
-export default function HomeScreen({ onStart }: Props) {
+export default function HomeScreen({ onStart, error, initialText }: Props) {
+  const [showPaste, setShowPaste] = useState(Boolean(initialText))
+  const [pasteText, setPasteText] = useState(initialText ?? '')
+  const [localError, setLocalError] = useState<string | null>(null)
+  const scanInputRef = useRef<HTMLInputElement>(null)
+  const uploadInputRef = useRef<HTMLInputElement>(null)
+
+  async function handleFile(file: File | null | undefined) {
+    if (!file) return
+    setLocalError(null)
+    if (!file.type.startsWith('image/')) {
+      setLocalError('Please choose a photo — PDF upload is not supported yet.')
+      return
+    }
+    try {
+      const { data, mediaType } = await fileToBase64(file)
+      onStart({ kind: 'image', data, mediaType })
+    } catch {
+      setLocalError('We could not open that file. Please try a different photo.')
+    }
+  }
+
+  function handlePasteSubmit() {
+    const trimmed = pasteText.trim()
+    if (!trimmed) {
+      setLocalError('Please type or paste some text first.')
+      return
+    }
+    setLocalError(null)
+    onStart({ kind: 'text', text: trimmed })
+  }
+
+  const shownError = localError || error
+
   return (
     <main className="mx-auto w-full max-w-[1120px] px-6 pt-16 pb-24 md:px-10">
       <p className="text-[17px] font-medium tracking-[0.14em] text-[var(--teal)] uppercase">
-        Access Reader
+        Kindred
       </p>
       <h1 className="mt-4 max-w-[16ch] text-[clamp(38px,6vw,64px)] leading-[1.08] font-semibold">
         What would you like translated?
       </h1>
       <p className="mt-6 max-w-[62ch] text-[20px] text-[var(--ink-soft)]">
-        Access Reader turns a written document into New Zealand Sign Language, with
+        Kindred turns a written document into New Zealand Sign Language, with
         plain-language subtitles and the original text kept beside it.
       </p>
+
+      {shownError && (
+        <p
+          role="alert"
+          className="mt-6 max-w-[62ch] border-2 border-[var(--ink)] bg-[#F5E9E5] px-5 py-4 text-[18px] font-medium"
+        >
+          {shownError}
+        </p>
+      )}
 
       <h2 className="sr-only">Choose how to add your document</h2>
       <div className="mt-12 grid gap-5 md:grid-cols-3">
@@ -86,21 +140,57 @@ export default function HomeScreen({ onStart }: Props) {
           icon={<ScanIcon />}
           label="Scan a document"
           note="Use your camera to photograph a letter or form."
-          onClick={() => onStart('scan')}
+          onClick={() => scanInputRef.current?.click()}
         />
+        <input
+          ref={scanInputRef}
+          type="file"
+          accept="image/*"
+          capture="environment"
+          className="sr-only"
+          onChange={(e) => handleFile(e.target.files?.[0])}
+        />
+
         <Card
           icon={<UploadIcon />}
-          label="Upload a file"
-          note="A PDF or a photo you already have on this device."
-          onClick={() => onStart('upload')}
+          label="Upload a photo"
+          note="A photo of a letter or form you already have on this device."
+          onClick={() => uploadInputRef.current?.click()}
         />
+        <input
+          ref={uploadInputRef}
+          type="file"
+          accept="image/*"
+          className="sr-only"
+          onChange={(e) => handleFile(e.target.files?.[0])}
+        />
+
         <Card
           icon={<PasteIcon />}
-          label="Paste a link or text"
-          note="A web page address, or text copied from anywhere."
-          onClick={() => onStart('paste')}
+          label="Paste text"
+          note="Text copied from anywhere — an email, a message, a document."
+          onClick={() => setShowPaste((v) => !v)}
+          expanded={showPaste}
         />
       </div>
+
+      {showPaste && (
+        <div className="mt-6 max-w-[720px] border-2 border-[var(--ink)] p-6">
+          <label htmlFor="paste-text" className="block text-[18px] font-semibold">
+            Paste your document text here
+          </label>
+          <textarea
+            id="paste-text"
+            rows={6}
+            value={pasteText}
+            onChange={(e) => setPasteText(e.target.value)}
+            className="mt-3 w-full border-2 border-[var(--rule)] p-4 text-[18px] leading-[1.6]"
+          />
+          <Button variant="primary" onClick={handlePasteSubmit} className="mt-4">
+            Translate this text
+          </Button>
+        </div>
+      )}
 
       <p className="mt-8 max-w-[62ch] text-[18px]">
         Your document stays private. Nothing is shared.
@@ -115,7 +205,7 @@ export default function HomeScreen({ onStart }: Props) {
         <h2 className="text-[22px] font-semibold">Continue where you left off</h2>
         <button
           type="button"
-          onClick={() => onStart('sample')}
+          onClick={() => onStart({ kind: 'sample' })}
           className="mt-5 flex w-full max-w-[640px] items-center justify-between gap-6 border-2 border-[var(--rule)] p-6 text-left transition-colors duration-150 hover:border-[var(--ink)]"
         >
           <span>
