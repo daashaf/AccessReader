@@ -5,6 +5,11 @@ export type DocumentInput =
       mediaType: string
     }
   | {
+      type: 'pdf'
+      data: string
+      mediaType: 'application/pdf'
+    }
+  | {
       type: 'text'
       text: string
     }

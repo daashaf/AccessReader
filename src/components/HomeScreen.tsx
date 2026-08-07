@@ -79,16 +79,20 @@ export default function HomeScreen({ onStart, onOpenSample }: Props) {
   async function handleFile(file?: File) {
     setLocalError(null)
 
-    if (!file || !file.type.startsWith('image/')) {
-      setLocalError('Please choose an image file.')
+    if (!file || (!file.type.startsWith('image/') && file.type !== 'application/pdf')) {
+      setLocalError('Please choose an image or PDF file.')
       return
     }
 
     try {
       const { data, mediaType } = await fileToBase64(file)
-      onStart({ type: 'image', data, mediaType })
+      if (mediaType === 'application/pdf') {
+        onStart({ type: 'pdf', data, mediaType: 'application/pdf' })
+      } else if (mediaType.startsWith('image/')) {
+        onStart({ type: 'image', data, mediaType })
+      }
     } catch {
-      setLocalError("We couldn't read that image. Please try another one.")
+      setLocalError("We couldn't read that file. Please try another one.")
     }
   }
 
@@ -136,7 +140,7 @@ export default function HomeScreen({ onStart, onOpenSample }: Props) {
         <Card
           icon={<UploadIcon />}
           label="Upload a file"
-          note="A photo you already have on this device."
+          note="A photo or PDF already on this device."
           onClick={() => {
             setLocalError(null)
             uploadInputRef.current?.click()
@@ -165,7 +169,7 @@ export default function HomeScreen({ onStart, onOpenSample }: Props) {
       <input
         ref={uploadInputRef}
         type="file"
-        accept="image/*"
+        accept="image/*,application/pdf"
         className="sr-only"
         tabIndex={-1}
         onChange={handleFileChange}
