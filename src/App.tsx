@@ -19,7 +19,14 @@ interface LoadedDocument {
 
 export default function App() {
   const [screen, setScreen] = useState<Screen>('home')
-  const [settings, setSettings] = useState<Settings>(defaultSettings)
+  const [settings, setSettings] = useState<Settings>(() => {
+    try {
+      const raw = localStorage.getItem('access-reader:settings')
+      return raw ? (JSON.parse(raw) as Settings) : defaultSettings
+    } catch (e) {
+      return defaultSettings
+    }
+  })
   const [loadedDocument, setLoadedDocument] = useState<LoadedDocument | null>(null)
   const [ready, setReady] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -31,6 +38,14 @@ export default function App() {
   useEffect(() => {
     document.documentElement.dataset.contrast = settings.contrast
   }, [settings.contrast])
+
+  useEffect(() => {
+    try {
+      localStorage.setItem('access-reader:settings', JSON.stringify(settings))
+    } catch (e) {
+      // ignore storage errors
+    }
+  }, [settings])
 
   const handleStart = useCallback(async (input: DocumentInput) => {
     setError(null)
@@ -105,6 +120,7 @@ export default function App() {
             settings={settings}
             onExit={() => setScreen('home')}
             onOpenSettings={() => setScreen('settings')}
+            onSettingsChange={setSettings}
           />
         )}
         {screen === 'settings' && (
