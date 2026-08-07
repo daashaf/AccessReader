@@ -1,5 +1,6 @@
 {
-  "description": "Streamline document review and design processes by enabling users to upload, annotate, and collaborate on files in real-time for enhanced productivity.",
+  "title": "Kindred",
+  "description": "Kindred turns everyday documents like bills and letters into New Zealand Sign Language, with plain-language subtitles and the original text kept alongside.",
   "robots": {
     "index": false
   },
