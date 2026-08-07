@@ -115,13 +115,13 @@ export default function HomeScreen({ onStart, error, initialText }: Props) {
   return (
     <main className="mx-auto w-full max-w-[1120px] px-6 pt-16 pb-24 md:px-10">
       <p className="text-[17px] font-medium tracking-[0.14em] text-[var(--teal)] uppercase">
-        Access Reader
+        Kindred
       </p>
       <h1 className="mt-4 max-w-[16ch] text-[clamp(38px,6vw,64px)] leading-[1.08] font-semibold">
         What would you like translated?
       </h1>
       <p className="mt-6 max-w-[62ch] text-[20px] text-[var(--ink-soft)]">
-        Access Reader turns a written document into New Zealand Sign Language, with
+        Kindred turns a written document into New Zealand Sign Language, with
         plain-language subtitles and the original text kept beside it.
       </p>
 
